@@ -215,15 +215,12 @@ int main(int argc, char *argv[]) {
                         switch (opcionAdmin) {
                             case '1': { // Ver listado de películas
                                 int numPeliculas;
-
-                                // Solicitar listado de películas
-                                sprintf(sendBuff, "2"); // Código para listar películas
-                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
-
                                 // Recibir número de películas
+                                memset(recvBuff, 0, sizeof(recvBuff));
                                 recv(s, recvBuff, sizeof(recvBuff), 0);
                                 sscanf(recvBuff, "%d", &numPeliculas);
+
+                                printf("Número de películas a recibir: %d\n", numPeliculas); // Debug
 
                                 // Mostrar encabezados
                                 mostrarTitulosPeliculas();
@@ -232,20 +229,33 @@ int main(int argc, char *argv[]) {
                                 for (int i = 0; i < numPeliculas; i++) {
                                     ClientePelicula p;
 
+                                    memset(recvBuff, 0, sizeof(recvBuff));
                                     recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                                    // Parsear datos
+
+                                    // Parsear datos con más seguridad
                                     char *token = strtok(recvBuff, ";");
-                                    if (token) strcpy(p.titulo, token);
+                                    if (token) {
+                                        strncpy(p.titulo, token, sizeof(p.titulo) - 1);
+                                        p.titulo[sizeof(p.titulo) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(p.genero, token);
+                                    if (token) {
+                                        strncpy(p.genero, token, sizeof(p.genero) - 1);
+                                        p.genero[sizeof(p.genero) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) p.duracion = atoi(token);
+                                    if (token) {
+                                        p.duracion = atoi(token);
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(p.Reparto, token);
+                                    if (token) {
+                                        strncpy(p.Reparto, token, sizeof(p.Reparto) - 1);
+                                        p.Reparto[sizeof(p.Reparto) - 1] = '\0';
+                                    }
 
                                     mostrarPelicula(p);
                                 }
@@ -256,42 +266,58 @@ int main(int argc, char *argv[]) {
                                 int numUsuarios;
 
                                 // Solicitar listado de usuarios
-                                sprintf(sendBuff, "3"); // Código para listar usuarios
-                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
-
-                                // Recibir número de usuarios
+                                                               // Recibir número de usuarios
                                 recv(s, recvBuff, sizeof(recvBuff), 0);
                                 sscanf(recvBuff, "%d", &numUsuarios);
 
-                                printf("\033[1;35m%20s%15s%15s%20s%15s%20s\n", "NOMBRE", "APELLIDO", "EMAIL", "NICKNAME", "PAIS", "CONTRASEÑA\033[0m\n");
+                                printf("\033[1;35m%20s%15s%15s%20s%20s%30s\n", "NOMBRE", "APELLIDO", "EMAIL", "NICKNAME", "PAIS", "CONTRASEÑA\033[0m\n");
 
                                 // Recibir y mostrar cada usuario
                                 for (int i = 0; i < numUsuarios; i++) {
                                     ClienteUsuario u;
 
+                                    memset(recvBuff, 0, sizeof(recvBuff));
                                     recv(s, recvBuff, sizeof(recvBuff), 0);
 
                                     // Parsear datos
+                                    // ✅ PARSEAR DATOS CON PROTECCIÓN
                                     char *token = strtok(recvBuff, ";");
-                                    if (token) strcpy(u.Nombre, token);
+                                    if (token) {
+                                        strncpy(u.Nombre, token, sizeof(u.Nombre) - 1);
+                                        u.Nombre[sizeof(u.Nombre) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Apellido, token);
+                                    if (token) {
+                                        strncpy(u.Apellido, token, sizeof(u.Apellido) - 1);
+                                        u.Apellido[sizeof(u.Apellido) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Email, token);
+                                    if (token) {
+                                        strncpy(u.Email, token, sizeof(u.Email) - 1);
+                                        u.Email[sizeof(u.Email) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(u.NickName, token);
+                                    if (token) {
+                                        strncpy(u.NickName, token, sizeof(u.NickName) - 1);
+                                        u.NickName[sizeof(u.NickName) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Pais, token);
+                                    if (token) {
+                                        strncpy(u.Pais, token, sizeof(u.Pais) - 1);
+                                        u.Pais[sizeof(u.Pais) - 1] = '\0';
+                                    }
 
                                     token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Contrasenia, token);
+                                    if (token) {
+                                        strncpy(u.Contrasenia, token, sizeof(u.Contrasenia) - 1);
+                                        u.Contrasenia[sizeof(u.Contrasenia) - 1] = '\0';
+                                    }
 
-                                    printf("%20s%15s%15s%20s%15s%15s\n",
+                                    printf("%20s%15s%20s%20s%15s%30s\n",
                                            u.Nombre, u.Apellido, u.Email, u.NickName, u.Pais, u.Contrasenia);
                                 }
                                 break;
@@ -308,9 +334,15 @@ int main(int argc, char *argv[]) {
                                 sprintf(sendBuff, "%s", titulo);
                                 send(s, sendBuff, sizeof(sendBuff), 0);
 
-                                // Recibir confirmación
+                                // Limpiar buffer antes de recibir
+                                memset(recvBuff, 0, sizeof(recvBuff));
                                 recv(s, recvBuff, sizeof(recvBuff), 0);
-                                if (strcmp(recvBuff, "1") == 0) {
+
+                                // Debug: ver qué se está recibiendo realmente
+                                printf("Respuesta recibida: '%s' (longitud: %d)\n", recvBuff, (int)strlen(recvBuff));
+
+                                // Comparación más robusta
+                                if (recvBuff[0] == '1') {  // Comparar solo el primer carácter
                                     cout << "\033[1;32mPelícula eliminada correctamente.\033[0m" << endl;
                                 } else {
                                     cout << "\033[1;31mError al eliminar la película.\033[0m" << endl;
@@ -319,48 +351,55 @@ int main(int argc, char *argv[]) {
                             }
 
                             case '4': { // Añadir película
-                                ClientePelicula p = pedirPelicula();
+                            	ClientePelicula p = pedirPelicula();
 
-                                // Enviar datos de la película
-                                sprintf(sendBuff, "7"); // Código para añadir película
-                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                            	// Enviar código para añadir película
+                            	sprintf(sendBuff, "7");
+                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
+                            	recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
 
-                                sprintf(sendBuff, "%s;%s;%d;%s", p.titulo, p.genero, p.duracion, p.Reparto);
-                                send(s, sendBuff, sizeof(sendBuff), 0);
+                            	// Enviar datos de la película
+                            	memset(sendBuff, 0, sizeof(sendBuff));
+                            	sprintf(sendBuff, "%s;%s;%d;%s", p.titulo, p.genero, p.duracion, p.Reparto);
+                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
 
-                                // Recibir confirmación
-                                recv(s, recvBuff, sizeof(recvBuff), 0);
-                                if (strcmp(recvBuff, "1") == 0) {
-                                    cout << "\033[1;32mPelícula añadida correctamente.\033[0m" << endl;
-                                } else {
-                                    cout << "\033[1;31mError al añadir la película.\033[0m" << endl;
-                                }
-                                break;
+                            	// Recibir confirmación
+                            	memset(recvBuff, 0, sizeof(recvBuff));
+                            	recv(s, recvBuff, sizeof(recvBuff), 0);
+
+                            	if (strncmp(recvBuff, "1", 1) == 0) {
+                            	    cout << "\033[1;32mPelícula añadida correctamente.\033[0m" << endl;
+                            	} else {
+                            	    cout << "\033[1;31mError al añadir la película.\033[0m" << endl;
+                            	}
+                            	break;
                             }
 
                             case '5': { // Añadir usuario
-                                ClienteUsuario u = registrarUsuario();
+                            	ClienteUsuario u = registrarUsuario();
 
-                                // Enviar datos del usuario
-                                sprintf(sendBuff, "4"); // Código para registrar usuario
-                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                            	// Enviar código para registrar usuario
+                            	sprintf(sendBuff, "4");
+                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
+                            	recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
 
-                                sprintf(sendBuff, "%s;%s;%s;%s;%s;%s",
-                                        u.Nombre, u.Apellido, u.Email, u.NickName, u.Pais, u.Contrasenia);
-                                send(s, sendBuff, sizeof(sendBuff), 0);
+                            	// Enviar datos del usuario
+                            	memset(sendBuff, 0, sizeof(sendBuff));
+                            	sprintf(sendBuff, "%s;%s;%s;%s;%s;%s",
+                            	    u.Nombre, u.Apellido, u.Email, u.NickName, u.Pais, u.Contrasenia);
+                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
 
-                                // Recibir confirmación
-                                recv(s, recvBuff, sizeof(recvBuff), 0);
-                                if (strcmp(recvBuff, "1") == 0) {
-                                    cout << "\033[1;32mUsuario añadido correctamente.\033[0m" << endl;
-                                } else {
-                                    cout << "\033[1;31mError al añadir el usuario.\033[0m" << endl;
-                                }
-                                break;
+                            	// Recibir confirmación
+                            	memset(recvBuff, 0, sizeof(recvBuff));
+                            	recv(s, recvBuff, sizeof(recvBuff), 0);
+
+                            	if (strncmp(recvBuff, "1", 1) == 0) {
+                            	    cout << "\033[1;32mUsuario añadido correctamente.\033[0m" << endl;
+                            	} else {
+                            	    cout << "\033[1;31mError al añadir el usuario.\033[0m" << endl;
+                            	}
+                            	break;
                             }
-
                             case '0': // Salir
                                 break;
 
@@ -412,6 +451,7 @@ int main(int argc, char *argv[]) {
                             break;
                         }
 
+
                         case '2': { // Registrarse
                             ClienteUsuario u = registrarUsuario();
 
@@ -449,65 +489,48 @@ int main(int argc, char *argv[]) {
                     do {
                         opcionUsuario = menuUsuario();
 
+                        printf("DEBUG CLIENTE: Enviando opción de usuario '%c'\n", opcionUsuario);
+                           sprintf(sendBuff, "%c", opcionUsuario);
+                           send(s, sendBuff, strlen(sendBuff), 0);
+
+                           // Recibir confirmación del servidor
+                           recv(s, recvBuff, sizeof(recvBuff), 0);
+                           printf("DEBUG CLIENTE: Confirmación recibida: %s\n", recvBuff);
                         switch (opcionUsuario) {
-                            case '1': { // Ver datos personales
-                                cout << "Ver datos personales" << endl;
+                        case '1': { // Ver datos personales
+                            cout << "Ver datos personales" << endl;
 
-                                // Solicitar datos completos del usuario
-                                sprintf(sendBuff, "3"); // Código para listar usuarios
-                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                            // YA SE RECIBIÓ CONFIRMACIÓN ARRIBA
 
-                                int numUsuarios;
-                                recv(s, recvBuff, sizeof(recvBuff), 0);
-                                sscanf(recvBuff, "%d", &numUsuarios);
+                            // Recibir datos del usuario
+                            recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                                bool encontrado = false;
-                                for (int i = 0; i < numUsuarios && !encontrado; i++) {
-                                    ClienteUsuario u;
+                            // Parsear datos
+                            ClienteUsuario u;
+                            char *token = strtok(recvBuff, ";");
+                            if (token) strcpy(u.Nombre, token);
 
-                                    recv(s, recvBuff, sizeof(recvBuff), 0);
+                            token = strtok(NULL, ";");
+                            if (token) strcpy(u.Apellido, token);
 
-                                    // Parsear datos
-                                    char *token = strtok(recvBuff, ";");
-                                    if (token) strcpy(u.Nombre, token);
+                            token = strtok(NULL, ";");
+                            if (token) strcpy(u.Email, token);
 
-                                    token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Apellido, token);
+                            token = strtok(NULL, ";");
+                            if (token) strcpy(u.NickName, token);
 
-                                    token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Email, token);
+                            token = strtok(NULL, ";");
+                            if (token) strcpy(u.Pais, token);
 
-                                    token = strtok(NULL, ";");
-                                    if (token) strcpy(u.NickName, token);
+                            token = strtok(NULL, ";");
+                            if (token) strcpy(u.Contrasenia, token);
 
-                                    token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Pais, token);
-
-                                    token = strtok(NULL, ";");
-                                    if (token) strcpy(u.Contrasenia, token);
-
-                                    // Si es el usuario actual, mostrar datos
-                                    if (strcmp(u.Email, usuarioActual.Email) == 0) {
-                                        mostrarUsuario(u);
-                                        usuarioActual = u; // Actualizar datos del usuario
-                                        encontrado = true;
-                                    }
-                                }
-
-                                if (!encontrado) {
-                                    cout << "\033[1;31mError: No se encontraron los datos del usuario.\033[0m" << endl;
-                                }
-                                break;
-                            }
-
+                            // Mostrar todos los datos
+                            mostrarUsuario(u);
+                            break;
+                        }
                             case '2': { // Ver listado de películas
                                 int numPeliculas;
-
-                                // Solicitar listado de películas
-                                sprintf(sendBuff, "2"); // Código para listar películas
-                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
 
                                 // Recibir número de películas
                                 recv(s, recvBuff, sizeof(recvBuff), 0);
