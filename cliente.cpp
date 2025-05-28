@@ -173,9 +173,14 @@ int main(int argc, char *argv[]) {
         send(s, sendBuff, sizeof(sendBuff), 0);
 
         // Recibir confirmación del servidor
+        memset(recvBuff, 0, sizeof(recvBuff));
         recv(s, recvBuff, sizeof(recvBuff), 0);
-        cout << recvBuff << endl;
+        printf("DEBUG CLIENTE: Confirmación recibida: '%s' (longitud: %d)\n", recvBuff, (int)strlen(recvBuff));
 
+        // Solo mostrar si parece válida
+        if (strstr(recvBuff, "Comando recibido") != NULL) {
+            cout << recvBuff << endl;
+        }
         switch (opcion) {
             case '1': { // Menú administrador
                 char email[50], contrasenia[50];
@@ -202,38 +207,99 @@ int main(int argc, char *argv[]) {
                 if (adminEncontrado) {
                     cout << "\033[1;32mAutenticación exitosa como administrador.\033[0m" << endl;
 
-                    // Menú del administrador
+                    // Menú del administrador - CON DEBUG
                     char opcionAdmin;
                     do {
                         opcionAdmin = menuAdministrador();
+                        printf("DEBUG CLIENTE: Opción seleccionada: '%c'\n", opcionAdmin);
+
+                        if (opcionAdmin == '0') {
+                                // Enviar la opción '0' al servidor para que sepa que sales
+                                memset(sendBuff, 0, sizeof(sendBuff));
+                                sprintf(sendBuff, "%c", opcionAdmin);
+                                send(s, sendBuff, sizeof(sendBuff), 0);
+                                break;  // Ahora sí, salir
+                            }
 
                         // Enviar opción al servidor
+                        memset(sendBuff, 0, sizeof(sendBuff));
                         sprintf(sendBuff, "%c", opcionAdmin);
-                        send(s, sendBuff, sizeof(sendBuff), 0);
-                        recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                        printf("DEBUG CLIENTE: Enviando opción al servidor: '%s'\n", sendBuff);
+
+                        if (send(s, sendBuff, sizeof(sendBuff), 0) == SOCKET_ERROR) {
+                            printf("ERROR enviando opción al servidor\n");
+                            break;
+                        }
+
+                        printf("DEBUG CLIENTE: Esperando confirmación del servidor...\n");
+
+                        // Recibir confirmación del servidor
+                        memset(recvBuff, 0, sizeof(recvBuff));
+                        int bytes_recibidos = recv(s, recvBuff, sizeof(recvBuff), 0);
+
+                        printf("DEBUG CLIENTE: Confirmación recibida - Bytes: %d, Contenido: '%s'\n",
+                               bytes_recibidos, recvBuff);
+
+                        if (bytes_recibidos <= 0) {
+                            printf("ERROR recibiendo confirmación del servidor\n");
+                            break;
+                        }
+
+                        printf("DEBUG CLIENTE: Entrando en switch con opción '%c'\n", opcionAdmin);
 
                         switch (opcionAdmin) {
-                            case '1': { // Ver listado de películas
-                                int numPeliculas;
-                                // Recibir número de películas
+                            case '1': { // Ver listado de películas - CLIENTE CON DEBUG
+                                printf("DEBUG: Cliente solicitando películas...\n");
+
+                                // 1. Recibir número de películas del servidor
                                 memset(recvBuff, 0, sizeof(recvBuff));
-                                recv(s, recvBuff, sizeof(recvBuff), 0);
-                                sscanf(recvBuff, "%d", &numPeliculas);
+                                int bytes_recibidos = recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                                printf("Número de películas a recibir: %d\n", numPeliculas); // Debug
+                                printf("DEBUG: Bytes recibidos del número de películas: %d\n", bytes_recibidos);
+                                printf("DEBUG: Contenido recibido: '%s'\n", recvBuff);
 
-                                // Mostrar encabezados
+                                if (bytes_recibidos <= 0) {
+                                    cout << "Error recibiendo número de películas" << endl;
+                                    break;
+                                }
+
+                                int numPeliculas = atoi(recvBuff);
+                                printf("DEBUG: Número de películas a recibir: %d\n", numPeliculas);
+
+                                if (numPeliculas <= 0) {
+                                    cout << "No hay películas registradas." << endl;
+                                    break;
+                                }
+
+                                // 2. Mostrar encabezados de la tabla
                                 mostrarTitulosPeliculas();
 
-                                // Recibir y mostrar cada película
+                                // 3. Recibir cada película una por una
                                 for (int i = 0; i < numPeliculas; i++) {
-                                    ClientePelicula p;
+                                    printf("DEBUG: Esperando película %d/%d...\n", i+1, numPeliculas);
 
+                                    // Limpiar buffer antes de recibir
                                     memset(recvBuff, 0, sizeof(recvBuff));
-                                    recv(s, recvBuff, sizeof(recvBuff), 0);
 
+                                    // Recibir datos de la película
+                                    bytes_recibidos = recv(s, recvBuff, sizeof(recvBuff), 0);
+                                    printf("DEBUG: Película %d - Bytes recibidos: %d\n", i+1, bytes_recibidos);
+                                    printf("DEBUG: Película %d - Datos: '%s'\n", i+1, recvBuff);
 
-                                    // Parsear datos con más seguridad
+                                    if (bytes_recibidos <= 0) {
+                                        cout << "Error recibiendo película " << i+1 << endl;
+                                        break;
+                                    }
+
+                                    // 4. Enviar confirmación al servidor (ACK)
+                                    printf("DEBUG: Enviando confirmación para película %d...\n", i+1);
+                                    memset(sendBuff, 0, sizeof(sendBuff));
+                                    strcpy(sendBuff, "OK");
+                                    int bytes_enviados = send(s, sendBuff, sizeof(sendBuff), 0);
+                                    printf("DEBUG: Confirmación enviada - Bytes: %d\n", bytes_enviados);
+
+                                    // 5. Parsear los datos recibidos
+                                    ClientePelicula p;
                                     char *token = strtok(recvBuff, ";");
                                     if (token) {
                                         strncpy(p.titulo, token, sizeof(p.titulo) - 1);
@@ -257,30 +323,53 @@ int main(int argc, char *argv[]) {
                                         p.Reparto[sizeof(p.Reparto) - 1] = '\0';
                                     }
 
+                                    // 6. Mostrar la película
+                                    printf("DEBUG: Mostrando película: %s\n", p.titulo);
                                     mostrarPelicula(p);
                                 }
+
+                                printf("DEBUG: Listado de películas completado\n");
                                 break;
                             }
 
-                            case '2': { // Ver listado de usuarios
-                                int numUsuarios;
+                            case '2': { // Ver listado de usuarios - CLIENTE
+                                // 1. Recibir número de usuarios del servidor
+                                memset(recvBuff, 0, sizeof(recvBuff));
+                                if (recv(s, recvBuff, sizeof(recvBuff), 0) <= 0) {
+                                    cout << "Error recibiendo número de usuarios" << endl;
+                                    break;
+                                }
 
-                                // Solicitar listado de usuarios
-                                                               // Recibir número de usuarios
-                                recv(s, recvBuff, sizeof(recvBuff), 0);
-                                sscanf(recvBuff, "%d", &numUsuarios);
+                                int numUsuarios = atoi(recvBuff);
+                                printf("Número de usuarios: %d\n", numUsuarios);
 
-                                printf("\033[1;35m%20s%15s%15s%20s%20s%30s\n", "NOMBRE", "APELLIDO", "EMAIL", "NICKNAME", "PAIS", "CONTRASEÑA\033[0m\n");
+                                if (numUsuarios <= 0) {
+                                    cout << "No hay usuarios registrados." << endl;
+                                    break;
+                                }
 
-                                // Recibir y mostrar cada usuario
+                                // 2. Mostrar encabezados de la tabla
+                                printf("\033[1;35m%20s%15s%20s%20s%15s%30s\033[0m\n",
+                                       "NOMBRE", "APELLIDO", "EMAIL", "NICKNAME", "PAIS", "CONTRASEÑA");
+
+                                // 3. Recibir cada usuario uno por uno
                                 for (int i = 0; i < numUsuarios; i++) {
-                                    ClienteUsuario u;
-
+                                    // Limpiar buffer antes de recibir
                                     memset(recvBuff, 0, sizeof(recvBuff));
-                                    recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                                    // Parsear datos
-                                    // ✅ PARSEAR DATOS CON PROTECCIÓN
+                                    // Recibir datos del usuario
+                                    if (recv(s, recvBuff, sizeof(recvBuff), 0) <= 0) {
+                                        cout << "Error recibiendo usuario " << i+1 << endl;
+                                        break;
+                                    }
+
+                                    // 4. Enviar confirmación al servidor (ACK)
+                                    memset(sendBuff, 0, sizeof(sendBuff));
+                                    strcpy(sendBuff, "OK");
+                                    send(s, sendBuff, strlen(sendBuff), 0);
+
+                                    // 5. Parsear los datos recibidos
+                                    ClienteUsuario u;
                                     char *token = strtok(recvBuff, ";");
                                     if (token) {
                                         strncpy(u.Nombre, token, sizeof(u.Nombre) - 1);
@@ -317,6 +406,7 @@ int main(int argc, char *argv[]) {
                                         u.Contrasenia[sizeof(u.Contrasenia) - 1] = '\0';
                                     }
 
+                                    // 6. Mostrar el usuario en formato tabla
                                     printf("%20s%15s%20s%20s%15s%30s\n",
                                            u.Nombre, u.Apellido, u.Email, u.NickName, u.Pais, u.Contrasenia);
                                 }
@@ -351,55 +441,56 @@ int main(int argc, char *argv[]) {
                             }
 
                             case '4': { // Añadir película
-                            	ClientePelicula p = pedirPelicula();
+                                ClientePelicula p = pedirPelicula();
 
-                            	// Enviar código para añadir película
-                            	sprintf(sendBuff, "7");
-                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
-                            	recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                                // Enviar código para añadir película
+                                sprintf(sendBuff, "7");
+                                send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
+                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
 
-                            	// Enviar datos de la película
-                            	memset(sendBuff, 0, sizeof(sendBuff));
-                            	sprintf(sendBuff, "%s;%s;%d;%s", p.titulo, p.genero, p.duracion, p.Reparto);
-                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
+                                // Enviar datos de la película
+                                memset(sendBuff, 0, sizeof(sendBuff));
+                                sprintf(sendBuff, "%s;%s;%d;%s", p.titulo, p.genero, p.duracion, p.Reparto);
+                                send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
 
-                            	// Recibir confirmación
-                            	memset(recvBuff, 0, sizeof(recvBuff));
-                            	recv(s, recvBuff, sizeof(recvBuff), 0);
+                                // Recibir confirmación
+                                memset(recvBuff, 0, sizeof(recvBuff));
+                                recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                            	if (strncmp(recvBuff, "1", 1) == 0) {
-                            	    cout << "\033[1;32mPelícula añadida correctamente.\033[0m" << endl;
-                            	} else {
-                            	    cout << "\033[1;31mError al añadir la película.\033[0m" << endl;
-                            	}
-                            	break;
+                                if (strncmp(recvBuff, "1", 1) == 0) {
+                                    cout << "\033[1;32mPelícula añadida correctamente.\033[0m" << endl;
+                                } else {
+                                    cout << "\033[1;31mError al añadir la película.\033[0m" << endl;
+                                }
+                                break;
                             }
 
                             case '5': { // Añadir usuario
-                            	ClienteUsuario u = registrarUsuario();
+                                ClienteUsuario u = registrarUsuario();
 
-                            	// Enviar código para registrar usuario
-                            	sprintf(sendBuff, "4");
-                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
-                            	recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                                // Enviar código para registrar usuario
+                                sprintf(sendBuff, "4");
+                                send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
+                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
 
-                            	// Enviar datos del usuario
-                            	memset(sendBuff, 0, sizeof(sendBuff));
-                            	sprintf(sendBuff, "%s;%s;%s;%s;%s;%s",
-                            	    u.Nombre, u.Apellido, u.Email, u.NickName, u.Pais, u.Contrasenia);
-                            	send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
+                                // Enviar datos del usuario
+                                memset(sendBuff, 0, sizeof(sendBuff));
+                                sprintf(sendBuff, "%s;%s;%s;%s;%s;%s",
+                                    u.Nombre, u.Apellido, u.Email, u.NickName, u.Pais, u.Contrasenia);
+                                send(s, sendBuff, strlen(sendBuff) + 1, 0); // Usar strlen en lugar de sizeof
 
-                            	// Recibir confirmación
-                            	memset(recvBuff, 0, sizeof(recvBuff));
-                            	recv(s, recvBuff, sizeof(recvBuff), 0);
+                                // Recibir confirmación
+                                memset(recvBuff, 0, sizeof(recvBuff));
+                                recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                            	if (strncmp(recvBuff, "1", 1) == 0) {
-                            	    cout << "\033[1;32mUsuario añadido correctamente.\033[0m" << endl;
-                            	} else {
-                            	    cout << "\033[1;31mError al añadir el usuario.\033[0m" << endl;
-                            	}
-                            	break;
+                                if (strncmp(recvBuff, "1", 1) == 0) {
+                                    cout << "\033[1;32mUsuario añadido correctamente.\033[0m" << endl;
+                                } else {
+                                    cout << "\033[1;31mError al añadir el usuario.\033[0m" << endl;
+                                }
+                                break;
                             }
+
                             case '0': // Salir
                                 break;
 
@@ -407,7 +498,11 @@ int main(int argc, char *argv[]) {
                                 cout << "\033[1;31mERROR! La opción seleccionada no es correcta\033[0m" << endl;
                                 break;
                         }
+
+                        printf("DEBUG CLIENTE: Fin del switch, volviendo al menú\n");
+
                     } while (opcionAdmin != '0');
+
                 } else {
                     cout << "\033[1;31mCredenciales incorrectas para el administrador\033[0m" << endl;
                 }
@@ -491,7 +586,7 @@ int main(int argc, char *argv[]) {
 
                         printf("DEBUG CLIENTE: Enviando opción de usuario '%c'\n", opcionUsuario);
                            sprintf(sendBuff, "%c", opcionUsuario);
-                           send(s, sendBuff, strlen(sendBuff), 0);
+                           send(s, sendBuff, strlen(sendBuff) + 1 , 0);
 
                            // Recibir confirmación del servidor
                            recv(s, recvBuff, sizeof(recvBuff), 0);
