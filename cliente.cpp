@@ -697,25 +697,35 @@ int main(int argc, char *argv[]) {
                                             cin.ignore();
 
                                             if (opcionRegistro == 's' || opcionRegistro == 'S') {
-                                                // Enviar solicitud para registrar visualización
-                                                sprintf(sendBuff, "6"); // Código para registrar visualización
-                                                send(s, sendBuff, sizeof(sendBuff), 0);
-                                                recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
+                                            	memset(sendBuff, 0, sizeof(sendBuff));
+                                            	sprintf(sendBuff, "6");
+                                                send(s, sendBuff, strlen(sendBuff), 0);
 
-                                                // Enviar email y título
+                                            	// Recibir confirmación "OK"
+                                            	memset(recvBuff, 0, sizeof(recvBuff));
+                                            	recv(s, recvBuff, sizeof(recvBuff), 0);
+                                            	printf("DEBUG CLIENTE: Confirmación recibida: '%s'\n", recvBuff);
+
+                                                // Enviar email
+                                            	memset(sendBuff, 0, sizeof(sendBuff));
                                                 sprintf(sendBuff, "%s", usuarioActual.Email);
-                                                send(s, sendBuff, sizeof(sendBuff), 0);
+                                            	send(s, sendBuff, strlen(sendBuff), 0);
 
-                                                sprintf(sendBuff, "%s", peliculaSeleccionada);
-                                                send(s, sendBuff, sizeof(sendBuff), 0);
+                                            	// Enviar título
+                                                memset(sendBuff, 0, sizeof(sendBuff));
+                                            	sprintf(sendBuff, "%s", peliculaSeleccionada);
+                                            	send(s, sendBuff, strlen(sendBuff), 0);  // ← Cambiar sizeof por strlen
 
-                                                // Recibir confirmación
-                                                recv(s, recvBuff, sizeof(recvBuff), 0);
-                                                if (strcmp(recvBuff, "1") == 0) {
-                                                    cout << "\033[1;32mPelícula registrada como vista correctamente.\033[0m" << endl;
-                                                } else {
-                                                    cout << "\033[1;31mError al registrar la visualización.\033[0m" << endl;
-                                                }
+                                            	// Recibir resultado final
+                                            	memset(recvBuff, 0, sizeof(recvBuff));
+                                            	recv(s, recvBuff, sizeof(recvBuff), 0);
+                                            	printf("DEBUG CLIENTE: Resultado recibido: '%s'\n", recvBuff);
+
+                                            	if (strcmp(recvBuff, "1") == 0) {
+                                            	   cout << "\033[1;32mPelícula registrada como vista correctamente.\033[0m" << endl;
+                                            	} else {
+                                            	   cout << "\033[1;31mError al registrar la visualización.\033[0m" << endl;
+                                            	  }
                                             }
                                         }
                                     }
