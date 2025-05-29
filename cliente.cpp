@@ -705,7 +705,7 @@ int main(int argc, char *argv[]) {
                                             	memset(recvBuff, 0, sizeof(recvBuff));
                                             	recv(s, recvBuff, sizeof(recvBuff), 0);
                                             	printf("DEBUG CLIENTE: Confirmación recibida: '%s'\n", recvBuff);
-
+                                            	fflush(stdout);
                                                 // Enviar email
                                             	memset(sendBuff, 0, sizeof(sendBuff));
                                                 sprintf(sendBuff, "%s", usuarioActual.Email);
@@ -720,7 +720,7 @@ int main(int argc, char *argv[]) {
                                             	memset(recvBuff, 0, sizeof(recvBuff));
                                             	recv(s, recvBuff, sizeof(recvBuff), 0);
                                             	printf("DEBUG CLIENTE: Resultado recibido: '%s'\n", recvBuff);
-
+                                            	fflush(stdout);
                                             	if (strcmp(recvBuff, "1") == 0) {
                                             	   cout << "\033[1;32mPelícula registrada como vista correctamente.\033[0m" << endl;
                                             	} else {
@@ -741,27 +741,33 @@ int main(int argc, char *argv[]) {
                                 cout << "\033[1;36m--- PELÍCULAS VISTAS ---\033[0m" << endl;
 
                                 // Solicitar películas vistas
-                                sprintf(sendBuff, "9"); // Código para listar películas vistas
-                                send(s, sendBuff, sizeof(sendBuff), 0);
+                                memset(sendBuff, 0, sizeof(sendBuff));
+                                sprintf(sendBuff, "%s", usuarioActual.Email);
+                                send(s, sendBuff, strlen(sendBuff), 0);  // ← Cambiar sizeof por strlen
+
+                                memset(recvBuff, 0, sizeof(recvBuff));
                                 recv(s, recvBuff, sizeof(recvBuff), 0); // Confirmación
 
                                 // Enviar email del usuario
+                                memset(sendBuff, 0, sizeof(sendBuff));
                                 sprintf(sendBuff, "%s", usuarioActual.Email);
-                                send(s, sendBuff, sizeof(sendBuff), 0);
+                                send(s, sendBuff, strlen(sendBuff), 0);  // ← Cambiar sizeof por strlen
 
                                 // Recibir número de películas vistas
-                                int numPeliculasVistas;
+                                memset(recvBuff, 0, sizeof(recvBuff));
                                 recv(s, recvBuff, sizeof(recvBuff), 0);
+                                int numPeliculasVistas;
                                 sscanf(recvBuff, "%d", &numPeliculasVistas);
 
                                 if (numPeliculasVistas > 0) {
                                     printf("\033[1;35m%20s%30s\n", "TÍTULO", "GÉNERO\033[0m");
                                     fflush(stdout);
-                                    // Recibir y mostrar cada película vista
+                                    fflush(stdout);
+
                                     for (int i = 0; i < numPeliculasVistas; i++) {
+                                        memset(recvBuff, 0, sizeof(recvBuff));
                                         recv(s, recvBuff, sizeof(recvBuff), 0);
 
-                                        // Parsear datos
                                         char titulo[100], genero[100];
                                         char *token = strtok(recvBuff, ";");
                                         if (token) strcpy(titulo, token);
@@ -781,7 +787,6 @@ int main(int argc, char *argv[]) {
                                 cin.get();
                                 break;
                             }
-
                             case '0': // Salir
                                 break;
 
