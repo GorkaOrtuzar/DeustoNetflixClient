@@ -9,7 +9,7 @@ DeustoNetflixClient es la interfaz de usuario o cliente de red que interactúa c
 ## Características
 
 - Cliente para conexión remota a servidor
-- Interfaz de usuario en consola/gráfica
+- Interfaz de usuario en consola
 
 ## Requisitos
 
